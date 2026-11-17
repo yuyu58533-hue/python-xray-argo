@@ -6,6 +6,7 @@ import sys
 import re
 import json
 import time
+import traceback
 import base64
 import hashlib
 import random
@@ -18,7 +19,7 @@ import subprocess
 import datetime
 import requests
 from pathlib import Path
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from cryptography.hazmat.primitives.asymmetric import x25519, ec
 from cryptography.hazmat.primitives import serialization, hashes
@@ -37,17 +38,27 @@ NEZHA_PORT = os.environ.get('NEZHA_PORT', '')          # v1留空, v0填agent通
 NEZHA_KEY = os.environ.get('NEZHA_KEY', '')            # v1的NZ_CLIENT_SECRET或v0 agent密钥
 ARGO_DOMAIN = os.environ.get('ARGO_DOMAIN', '')        # Argo固定隧道域名,留空使用临时隧道
 ARGO_AUTH = os.environ.get('ARGO_AUTH', '')            # Argo固定隧道token或json,留空使用临时隧道
-ARGO_PORT = int(os.environ.get('ARGO_PORT', '8001'))   # Argo隧道端口
+def _int_env(name, default):
+    """读整数环境变量,值非法时回退默认值(避免启动时直接崩溃)。"""
+    try:
+        return int(os.environ.get(name) or default)
+    except (ValueError, TypeError):
+        print(f'Warning: invalid {name}={os.environ.get(name)!r}, using {default}', file=sys.stderr)
+        return int(default)
+
+ARGO_PORT = _int_env('ARGO_PORT', '8001')              # Argo隧道端口
 S5_PORT = os.environ.get('S5_PORT', '')                # socks5端口,留空不开启
 SS_PORT = os.environ.get('SS_PORT', '')                # shadowsocks直连端口,留空不开启
 HY2_PORT = os.environ.get('HY2_PORT', '')              # hy2端口,留空不开启
 REALITY_PORT = os.environ.get('REALITY_PORT', '')      # reality端口,留空不开启
 CFIP = os.environ.get('CFIP', 'cf.877774.xyz')         # 优选ip或域名
-CFPORT = int(os.environ.get('CFPORT', '443'))          # 优选端口
+CFPORT = _int_env('CFPORT', '443')                     # 优选端口
 NAME = os.environ.get('NAME', '')                      # 节点名称
 CHAT_ID = os.environ.get('CHAT_ID', '')                # Telegram chat_id
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '')            # Telegram bot_token
-PORT = int(os.environ.get('PORT') or '3000')           # http订阅端口
+# 有些平台注入 SERVER_PORT 而不是 PORT(如本部署的 26000),只认 PORT 会导致
+# 应用监听 3000 而代理去连 SERVER_PORT,公网一直 502;PORT 优先,其次 SERVER_PORT
+PORT = _int_env('PORT', os.environ.get('SERVER_PORT') or '3000')  # http订阅端口
 SHOW_LOG = os.environ.get('SHOW_LOG', 'true').lower() not in ('false', 'disable', 'no')  # 是否显示日志,默认显示，no/false/disable 不显示
 
 # =========================== 日志控制 ===========================
@@ -751,43 +762,45 @@ def extract_domains():
         argo_domain = ARGO_DOMAIN
         log(f'ARGO_DOMAIN: {argo_domain}')
         generate_links(argo_domain)
-    else:
+        return
+
+    # 临时隧道:循环等待 boot.log 出现隧道域名,失败时重启 cloudflared 再试。
+    # 原先是递归,隧道长期起不来会在约 1000 次重试后 RecursionError,导致
+    # 整个启动线程死亡;改成循环后可无限重试,且 boot.log 不存在时也会等,
+    # 而不是像原来那样直接返回、永远不生成节点。
+    while True:
         try:
-            if boot_log_path.exists():
-                file_content = boot_log_path.read_text(encoding='utf-8')
-                lines = file_content.split('\n')
-                argo_domains = []
-
-                for line in lines:
-                    domain_match = re.search(r'https?://([^ ]*trycloudflare\.com)/?', line)
-                    if domain_match:
-                        domain = domain_match.group(1)
-                        argo_domains.append(domain)
-
-                if argo_domains:
-                    argo_domain = argo_domains[0]
-                    log(f'ArgoDomain: {argo_domain}')
-                    generate_links(argo_domain)
-                else:
-                    log('ArgoDomain not found, re-running bot to obtain ArgoDomain')
-                    try:
-                        boot_log_path.unlink()
-                    except FileNotFoundError:
-                        pass
-
-                    try:
-                        exec_cmd(f'pkill -f "[{bot_name[0]}]{bot_name[1:]}" > /dev/null 2>&1')
-                    except Exception:
-                        pass
-
-                    time.sleep(3)
-                    args = f'tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile {boot_log_path} --loglevel info --url http://localhost:{ARGO_PORT}'
-                    exec_cmd(f'nohup {bot_path} {args} >/dev/null 2>&1 &')
-                    log(f'{bot_name} is running')
-                    time.sleep(6)
-                    extract_domains()
+            if not boot_log_path.exists():
+                time.sleep(2)
+                continue
+            file_content = boot_log_path.read_text(encoding='utf-8')
+            argo_domains = []
+            for line in file_content.split('\n'):
+                domain_match = re.search(r'https?://([^ ]*trycloudflare\.com)/?', line)
+                if domain_match:
+                    argo_domains.append(domain_match.group(1))
+            if argo_domains:
+                argo_domain = argo_domains[0]
+                log(f'ArgoDomain: {argo_domain}')
+                generate_links(argo_domain)
+                return
+            log('ArgoDomain not found, re-running bot to obtain ArgoDomain')
+            try:
+                boot_log_path.unlink()
+            except FileNotFoundError:
+                pass
+            try:
+                exec_cmd(f'pkill -f "[{bot_name[0]}]{bot_name[1:]}" > /dev/null 2>&1')
+            except Exception:
+                pass
+            time.sleep(3)
+            args = f'tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile {boot_log_path} --loglevel info --url http://localhost:{ARGO_PORT}'
+            exec_cmd(f'nohup {bot_path} {args} >/dev/null 2>&1 &')
+            log(f'{bot_name} is running')
+            time.sleep(6)
         except Exception as e:
             log_error(f'Error reading boot.log: {e}')
+            time.sleep(5)
 
 # =========================== 获取 ISP 信息 ===========================
 def get_meta_info():
@@ -1084,8 +1097,17 @@ if __name__ == '__main__':
 
     always_log(f'server is running on {PORT}!')
 
+    def start_server_guarded():
+        # 启动线程原来没有 try/except:任何一步抛错都会让线程静默死亡,
+        # HTTP 还在跑、/sub 永远是空,问题很难定位;这里明确打出完整 traceback
+        try:
+            start_server()
+        except Exception:
+            always_log('FATAL: startup thread died unexpectedly:')
+            always_log(traceback.format_exc())
+
     # 在后台线程中启动主流程
-    t = threading.Thread(target=start_server, daemon=True)
+    t = threading.Thread(target=start_server_guarded, daemon=True)
     t.start()
 
     # 主线程阻塞在 HTTP 服务器上
