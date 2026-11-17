@@ -1,10 +1,10 @@
 # 说明
 
-本项目是基于python环境使用,搭建argo-xray节点，集成哪吒探针v0/v1自由选择，包含vless-ws-tls/vmess-ws-tls/trojan-ws-tls三协议组合
+本项目是基于python环境使用,搭建argo-xray节点，集成哪吒探针v0/v1自由选择，包含 VLESS-WS / VLESS-HTTPUpgrade / VLESS-XHTTP(H2/H3) / VLESS-Encryption / Trojan-WS（Argo）及 Hysteria2 / Reality / Shadowsocks / SOCKS5（多端口平台）
 
 # 部署
 
-方式一：常规python环境，例如游戏平台玩具，只需上传app.py和requirements.txt两个文件即可，app.py需授权777,app.py中17至30行填写变量。
+方式一：常规python环境，例如游戏平台玩具，只需上传app.py和requirements.txt两个文件即可，app.py需授权777,app.py中17至30行填写变量。如需首页封面页，另上传index.html（流浪狗救助页）即可。
 
 方式二：文件+命令结合，app.py需赋权，上传app.py和requirements.tx两个文件，先运行chmod +x app.py 再运行pip install -r requirements.txt 然后运行screen python app.py即可，提示screen not found说明screen未安装，Debian/Ubuntu安装命令：apt install -y screen，centos安装命令：yum install -y screen
 
@@ -28,6 +28,7 @@
   | S5_PORT      | 否 |        |socks5端口，填写开启                |
   | HY2_PORT     | 否 |        |hysteria2协议端口，填写开启         |
   | REALITY_PORT | 否 |        |reality协议端口，填写开启           |
+  | SS_PORT      | 否 |        |shadowsocks直连端口，填写开启（2022-blake3-aes-128-gcm）|
   | CFIP         | 否 |time.is | 节点优选域名或ip                   |
   | CFPORT       | 否 |  443   |节点端口                           |
   | NAME         | 否 |        | 节点名称前缀，例如：Koyeb Fly        |

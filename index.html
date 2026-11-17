@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>归家事务所 · 流浪狗救助站</title>
+<meta name="description" content="归家事务所是一间小小的流浪狗救助站。我们把街头的它们接回来，治好，安置好，再送去一个真正的家。">
+<style>
+  :root{
+    --paper:#FBF6EC; --paper2:#F4EBD8; --ink:#2B2620; --ink2:#6B6257;
+    --terra:#C96F4A; --terra2:#A95534; --leaf:#5B7A5E; --leaf2:#48684B;
+    --gold:#D9A441; --line:#E5D9C3; --card:#FFFDF7; --shadow:0 10px 30px rgba(43,38,32,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:var(--paper);color:var(--ink);line-height:1.75;font-size:16px}
+  h1,h2,h3,.serif{font-family:"Noto Serif SC","Songti SC","STSong",serif;font-weight:700;line-height:1.35}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  .eyebrow{font-size:13px;letter-spacing:.28em;color:var(--terra);font-weight:700}
+  .paw{display:inline-block;vertical-align:-2px}
+
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:50;background:rgba(251,246,236,.92);
+    backdrop-filter:blur(8px);border-bottom:1px dashed var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:"Noto Serif SC","Songti SC",serif;
+    font-size:21px;font-weight:700}
+  .brand small{display:block;font-family:"PingFang SC",sans-serif;font-size:11px;font-weight:400;
+    color:var(--ink2);letter-spacing:.2em}
+  .brand-mark{width:40px;height:40px;border-radius:50%;background:var(--terra);display:grid;
+    place-items:center;flex:none}
+  .nav-links{display:flex;gap:26px;font-size:15px;color:var(--ink2)}
+  .nav-links a:hover{color:var(--terra)}
+  .btn{display:inline-block;padding:11px 24px;border-radius:999px;font-size:15px;font-weight:700;
+    border:2px solid var(--ink);transition:.2s;cursor:pointer}
+  .btn-solid{background:var(--ink);color:#fff}
+  .btn-solid:hover{background:var(--terra2);border-color:var(--terra2)}
+  .btn-line{background:transparent}
+  .btn-line:hover{border-color:var(--terra);color:var(--terra)}
+  .btn-terra{background:var(--terra);border-color:var(--terra);color:#fff}
+  .btn-terra:hover{background:var(--terra2)}
+  @media(max-width:760px){.nav-links{display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center;
+    padding:64px 0 56px}
+  .hero h1{font-size:clamp(38px,6vw,58px);margin:16px 0 20px}
+  .hero h1 em{font-style:normal;color:var(--terra)}
+  .hero p{color:var(--ink2);font-size:17px;max-width:52ch}
+  .hero-cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
+  .hero-note{margin-top:20px;font-size:14px;color:var(--ink2)}
+  .hero-note b{color:var(--leaf)}
+  .hero-art{background:var(--paper2);border:2px dashed var(--line);border-radius:28px 28px 28px 4px;
+    padding:18px;box-shadow:var(--shadow)}
+  .hero-art svg{width:100%;height:auto;display:block}
+  .hero-art figcaption{text-align:center;font-size:13px;color:var(--ink2);margin-top:8px}
+  @media(max-width:860px){.hero{grid-template-columns:1fr;padding-top:44px}}
+
+  /* ---------- stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--line);
+    border-radius:18px;overflow:hidden;border:2px solid var(--line);margin-bottom:72px}
+  .stat{background:var(--card);padding:26px 10px;text-align:center}
+  .stat b{display:block;font-family:"Noto Serif SC",serif;font-size:34px;color:var(--terra)}
+  .stat span{font-size:14px;color:var(--ink2)}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+  /* ---------- sections ---------- */
+  section{padding-bottom:72px;scroll-margin-top:80px}
+  .sec-head{margin-bottom:30px}
+  .sec-head h2{font-size:32px;margin:8px 0 10px}
+  .sec-head p{color:var(--ink2);max-width:62ch}
+
+  /* ---------- dogs ---------- */
+  .filter{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+  .chip{padding:8px 18px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);
+    font-size:14px;cursor:pointer}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .dogs{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  @media(max-width:700px){.dogs{grid-template-columns:1fr}}
+  .dog{background:var(--card);border:1.5px solid var(--line);border-radius:20px;overflow:hidden;
+    box-shadow:var(--shadow)}
+  .dog-art{height:210px;display:grid;place-items:center;border-bottom:1.5px dashed var(--line)}
+  .dog-art svg{width:150px;height:150px}
+  .dog-body{padding:20px 22px 22px}
+  .dog-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .dog-top h3{font-size:22px}
+  .tag{font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;white-space:nowrap}
+  .tag-ok{background:#E3EDE3;color:var(--leaf2)}
+  .tag-care{background:#FBEEDD;color:#9A6B1F}
+  .tag-booked{background:#EDE7F6;color:#5E4B8B}
+  .dog-meta{font-size:14px;color:var(--ink2);margin:6px 0 10px}
+  .dog-story{font-size:15px;color:var(--ink2)}
+  .dog-story[hidden]{display:none}
+  .dog-more{margin-top:12px;background:none;border:none;color:var(--terra);font-size:14px;
+    font-weight:700;cursor:pointer;padding:0}
+  .dog-more:hover{text-decoration:underline}
+
+  /* ---------- steps ---------- */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:step}
+  @media(max-width:860px){.steps{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:480px){.steps{grid-template-columns:1fr}}
+  .step{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:22px;
+    position:relative}
+  .step::before{counter-increment:step;content:counter(step,decimal-leading-zero);
+    font-family:"Noto Serif SC",serif;font-size:30px;color:var(--gold);display:block;margin-bottom:6px}
+  .step h3{font-size:19px;margin-bottom:6px}
+  .step p{font-size:14.5px;color:var(--ink2)}
+
+  /* ---------- help ---------- */
+  .help-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+  @media(max-width:700px){.help-grid{grid-template-columns:1fr}}
+  .help{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:26px;
+    box-shadow:var(--shadow)}
+  .help h3{font-size:21px;margin-bottom:8px}
+  .help p{font-size:15px;color:var(--ink2);margin-bottom:16px}
+  .progress{height:12px;background:var(--paper2);border-radius:999px;overflow:hidden;margin:10px 0 6px}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--terra));
+    border-radius:999px;transition:width 1.2s ease}
+  .progress-note{font-size:13px;color:var(--ink2)}
+  .check{list-style:none;margin-top:4px}
+  .check li{padding-left:28px;position:relative;margin-bottom:10px;font-size:15px;color:var(--ink2)}
+  .check li::before{content:"✓";position:absolute;left:2px;top:0;color:var(--leaf);font-weight:700}
+
+  /* ---------- faq ---------- */
+  details{background:var(--card);border:1.5px solid var(--line);border-radius:14px;
+    padding:16px 20px;margin-bottom:12px}
+  summary{cursor:pointer;font-weight:700;font-size:16px;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";float:right;color:var(--terra);font-size:20px;line-height:1.2}
+  details[open] summary::after{content:"−"}
+  details p{color:var(--ink2);font-size:15px;margin-top:10px}
+
+  /* ---------- footer ---------- */
+  footer{border-top:2px dashed var(--line);padding:40px 0 48px;text-align:center}
+  footer .brand{justify-content:center;margin-bottom:12px}
+  footer p{color:var(--ink2);font-size:14px}
+  .foot-note{margin-top:14px;font-size:13px;color:#A39A8A}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      <span class="brand-mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <ellipse cx="12" cy="15.5" rx="4.6" ry="3.8" fill="#FBF6EC"/>
+          <circle cx="5.6" cy="11" r="2.1" fill="#FBF6EC"/><circle cx="9.4" cy="7.6" r="2.1" fill="#FBF6EC"/>
+          <circle cx="14.6" cy="7.6" r="2.1" fill="#FBF6EC"/><circle cx="18.4" cy="11" r="2.1" fill="#FBF6EC"/>
+        </svg>
+      </span>
+      <span>归家事务所<small>流浪狗救助站</small></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#dogs">等家的孩子</a>
+      <a href="#steps">救助流程</a>
+      <a href="#help">如何帮忙</a>
+      <a href="#faq">常见问题</a>
+    </nav>
+    <a class="btn btn-solid" href="#help">领养咨询</a>
+  </div>
+</header>
+
+<main class="wrap" id="top">
+  <div class="hero">
+    <div>
+      <span class="eyebrow">流浪狗救助站 · 城郊小院</span>
+      <h1>每一只流浪狗，<br>都值得<em>一个归处</em>。</h1>
+      <p>我们是一间小小的救助站。六年来，志愿者们把街头的它们一只只接回来——治好伤，养胖一点，学会信任人，再送去一个真正的家。这里没有豪华犬舍，只有一个晒得到太阳的小院，和一群不肯放弃的人。</p>
+      <div class="hero-cta">
+        <a class="btn btn-terra" href="#dogs">看看等家的孩子</a>
+        <a class="btn btn-line" href="#help">我想帮忙</a>
+      </div>
+      <p class="hero-note">本周小院开放探访：<b>周六、周日 10:00 – 16:00</b>，来之前在公众号留个言就好。</p>
+    </div>
+    <figure class="hero-art">
+      <svg viewBox="0 0 400 300" role="img" aria-label="小狗坐在小院门口等家的插画">
+        <circle cx="330" cy="52" r="30" fill="#D9A441"/>
+        <circle cx="330" cy="52" r="40" fill="#D9A441" opacity=".25"/>
+        <path d="M0 210 Q100 170 200 205 T400 200 V300 H0 Z" fill="#DCE8D4"/>
+        <path d="M0 240 Q120 210 240 238 T400 232 V300 H0 Z" fill="#B9CFAF"/>
+        <g>
+          <rect x="52" y="150" width="86" height="66" rx="6" fill="#FFFDF7" stroke="#2B2620" stroke-width="3"/>
+          <path d="M44 152 L95 112 L146 152 Z" fill="#C96F4A" stroke="#2B2620" stroke-width="3" stroke-linejoin="round"/>
+          <rect x="84" y="178" width="24" height="38" rx="10" fill="#5B7A5E"/>
+          <circle cx="70" cy="170" r="7" fill="#D9A441" stroke="#2B2620" stroke-width="2.5"/>
+        </g>
+        <g>
+          <ellipse cx="252" cy="238" rx="52" ry="10" fill="#000" opacity=".08"/>
+          <path d="M226 232 c-8-34 4-58 26-58 s34 24 26 58 z" fill="#E8B04B"/>
+          <path d="M228 186 c-14-8 -20-24 -12-34 c8-8 22-2 26 10 z" fill="#C68A2E"/>
+          <path d="M276 186 c14-8 20-24 12-34 c-8-8 -22-2 -26 10 z" fill="#C68A2E"/>
+          <circle cx="240" cy="192" r="4" fill="#2B2620"/><circle cx="264" cy="192" r="4" fill="#2B2620"/>
+          <ellipse cx="252" cy="204" rx="7" ry="5.5" fill="#2B2620"/>
+          <path d="M252 210 v8 M252 218 c-4 4 -10 4 -12 0 M252 218 c4 4 10 4 12 0" stroke="#2B2620" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M244 224 q8 10 16 0 q-4 12 -8 12 q-4 0 -8 -12" fill="#E88A7A"/>
+          <path d="M232 232 q-10 8 -22 2 M272 232 q10 8 22 2" stroke="#C68A2E" stroke-width="7" fill="none" stroke-linecap="round"/>
+        </g>
+        <g fill="#C96F4A">
+          <circle cx="150" cy="252" r="3"/><circle cx="160" cy="246" r="3"/><circle cx="170" cy="252" r="3"/>
+          <circle cx="316" cy="258" r="3"/><circle cx="326" cy="252" r="3"/><circle cx="336" cy="258" r="3"/>
+        </g>
+      </svg>
+      <figcaption>阿福在小院门口等了三个月，等到了它的家人。</figcaption>
+    </figure>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>327</b><span>只狗狗已经归家</span></div>
+    <div class="stat"><b>41</b><span>只正在等一个家</span></div>
+    <div class="stat"><b>128</b><span>位长期志愿者</span></div>
+    <div class="stat"><b>6 年</b><span>小院从未打烊</span></div>
+  </div>
+
+  <section id="dogs">
+    <div class="sec-head">
+      <span class="eyebrow">等家的孩子</span>
+      <h2>它们的故事，都缺一个结尾。</h2>
+      <p>每只狗狗都有名字、脾气和过去。点开卡片看看，也许其中一只，就是在等你。</p>
+    </div>
+    <div class="filter" role="group" aria-label="按状态筛选">
+      <button class="chip on" data-filter="all">全部</button>
+      <button class="chip" data-filter="ok">可领养</button>
+      <button class="chip" data-filter="care">治疗中</button>
+      <button class="chip" data-filter="booked">已预定</button>
+    </div>
+    <div class="dogs">
+
+      <article class="dog" data-status="ok">
+        <div class="dog-art" style="background:#FBEEDD">
+          <svg viewBox="0 0 150 150" role="img" aria-label="大黄的画像">
+            <ellipse cx="75" cy="132" rx="42" ry="8" fill="#000" opacity=".07"/>
+            <path d="M35 78 C28 44 44 28 60 38 C70 45 70 66 62 80 Z" fill="#B87A2E"/>
+            <path d="M115 78 C122 44 106 28 90 38 C80 45 80 66 88 80 Z" fill="#B87A2E"/>
+            <ellipse cx="75" cy="82" rx="42" ry="46" fill="#E8B04B"/>
+            <ellipse cx="75" cy="102" rx="24" ry="20" fill="#F6DC9E"/>
+            <circle cx="59" cy="74" r="5" fill="#2B2620"/><circle cx="91" cy="74" r="5" fill="#2B2620"/>
+            <circle cx="61" cy="72" r="1.8" fill="#fff"/><circle cx="93" cy="72" r="1.8" fill="#fff"/>
+            <ellipse cx="75" cy="96" rx="8" ry="6" fill="#2B2620"/>
+            <path d="M75 102 v6 M75 108 c-5 5 -11 5 -13 0 M75 108 c5 5 11 5 13 0" stroke="#2B2620" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M66 116 q9 12 18 0 q-3 14 -9 14 q-6 0 -9 -14" fill="#E88A7A"/>
+          </svg>
+        </div>
+        <div class="dog-body">
+          <div class="dog-top"><h3>大黄</h3><span class="tag tag-ok">可领养</span></div>
+          <p class="dog-meta">田园犬 · 3 岁 · 公 · 已绝育 · 已驱虫</p>
+          <p class="dog-story">在菜市场门口跟了志愿者一路，尾巴摇得像拨浪鼓。亲人、护食改掉了，现在是小院的“迎宾员”，谁来都先闻闻鞋。</p>
+          <p class="dog-story" hidden>大黄会握手、会坐下，遛弯不拽绳。它最适合有院子或者每天能遛两次的家庭。怕打雷，雷雨天需要有人陪着。</p>
+          <button class="dog-more" type="button">了解更多 ↓</button>
+        </div>
+      </article>
+
+      <article class="dog" data-status="care">
+        <div class="dog-art" style="background:#E9E4DA">
+          <svg viewBox="0 0 150 150" role="img" aria-label="黑妹的画像">
+            <ellipse cx="75" cy="132" rx="42" ry="8" fill="#000" opacity=".07"/>
+            <path d="M38 66 C30 34 48 22 62 34 C72 42 70 64 62 76 Z" fill="#3A3632"/>
+            <path d="M112 66 C120 34 102 22 88 34 C78 42 80 64 88 76 Z" fill="#3A3632"/>
+            <ellipse cx="75" cy="82" rx="42" ry="46" fill="#4A4540"/>
+            <ellipse cx="75" cy="104" rx="24" ry="20" fill="#EDE6D8"/>
+            <circle cx="59" cy="74" r="5" fill="#F6E27A"/><circle cx="91" cy="74" r="5" fill="#F6E27A"/>
+            <circle cx="59" cy="74" r="2.2" fill="#2B2620"/><circle cx="91" cy="74" r="2.2" fill="#2B2620"/>
+            <ellipse cx="75" cy="98" rx="8" ry="6" fill="#1E1B18"/>
+            <path d="M75 104 v6 M75 110 c-5 4 -10 4 -12 0 M75 110 c5 4 10 4 12 0" stroke="#1E1B18" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M52 52 q10 -8 20 -2" stroke="#8A8378" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="dog-body">
+          <div class="dog-top"><h3>黑妹</h3><span class="tag tag-care">治疗中</span></div>
+          <p class="dog-meta">黑犬 · 2 岁 · 母 · 后腿恢复中</p>
+          <p class="dog-story">被车撞后在路边躺了一夜，送来时后腿骨折。现在手术做完了，每天做复健，走路一天比一天稳。</p>
+          <p class="dog-story" hidden>黑妹很安静，不吵不闹，喜欢晒太阳。康复后可以正常走路，只是跑不快。它需要一个有耐心、不催它的家。治疗费用还在筹，点“捐助口粮”也可以指定帮它。</p>
+          <button class="dog-more" type="button">了解更多 ↓</button>
+        </div>
+      </article>
+
+      <article class="dog" data-status="ok">
+        <div class="dog-art" style="background:#EAF1F6">
+          <svg viewBox="0 0 150 150" role="img" aria-label="雪团的画像">
+            <ellipse cx="75" cy="132" rx="42" ry="8" fill="#000" opacity=".07"/>
+            <circle cx="40" cy="66" r="16" fill="#D8DEE2"/>
+            <circle cx="110" cy="66" r="16" fill="#D8DEE2"/>
+            <ellipse cx="75" cy="82" rx="44" ry="46" fill="#F7F5F0"/>
+            <ellipse cx="75" cy="102" rx="24" ry="20" fill="#EFE9DC"/>
+            <circle cx="59" cy="74" r="5.5" fill="#2B2620"/><circle cx="91" cy="74" r="5.5" fill="#2B2620"/>
+            <circle cx="61" cy="72" r="1.8" fill="#fff"/><circle cx="93" cy="72" r="1.8" fill="#fff"/>
+            <ellipse cx="75" cy="96" rx="7" ry="5.5" fill="#C96F4A"/>
+            <path d="M75 102 v6 M75 108 c-5 5 -11 5 -13 0 M75 108 c5 5 11 5 13 0" stroke="#2B2620" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M60 44 q15 -10 30 0" stroke="#D8DEE2" stroke-width="6" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="dog-body">
+          <div class="dog-top"><h3>雪团</h3><span class="tag tag-ok">可领养</span></div>
+          <p class="dog-meta">白色中型犬 · 1 岁 · 母 · 已绝育 · 亲猫</p>
+          <p class="dog-story">一窝五只里最小的一只，被人装在纸箱放在救助站门口。现在是全院最粘人的小尾巴，跟猫也能处。</p>
+          <p class="dog-story" hidden>雪团还在长身体，饭量不小，换毛季需要勤梳毛。它很聪明，三天学会了定点上厕所。适合第一次养狗、愿意花时间陪它的家庭。</p>
+          <button class="dog-more" type="button">了解更多 ↓</button>
+        </div>
+      </article>
+
+      <article class="dog" data-status="booked">
+        <div class="dog-art" style="background:#E3EDE3">
+          <svg viewBox="0 0 150 150" role="img" aria-label="耳朵的画像">
+            <ellipse cx="75" cy="132" rx="42" ry="8" fill="#000" opacity=".07"/>
+            <path d="M44 62 L38 22 L66 40 Z" fill="#8A5A33"/>
+            <path d="M106 62 L112 22 L84 40 Z" fill="#8A5A33"/>
+            <path d="M46 56 L43 32 L60 42 Z" fill="#D9A49A"/>
+            <path d="M104 56 L107 32 L90 42 Z" fill="#D9A49A"/>
+            <ellipse cx="75" cy="84" rx="42" ry="44" fill="#B08A5A"/>
+            <ellipse cx="75" cy="103" rx="24" ry="19" fill="#E8D9BE"/>
+            <circle cx="59" cy="76" r="5" fill="#2B2620"/><circle cx="91" cy="76" r="5" fill="#2B2620"/>
+            <circle cx="61" cy="74" r="1.8" fill="#fff"/><circle cx="93" cy="74" r="1.8" fill="#fff"/>
+            <ellipse cx="75" cy="97" rx="8" ry="6" fill="#2B2620"/>
+            <path d="M75 103 v6 M75 109 c-5 5 -11 5 -13 0 M75 109 c5 5 11 5 13 0" stroke="#2B2620" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="dog-body">
+          <div class="dog-top"><h3>耳朵</h3><span class="tag tag-booked">已预定</span></div>
+          <p class="dog-meta">立耳犬 · 4 岁 · 公 · 已绝育 · 很会看家</p>
+          <p class="dog-story">耳朵最大，胆子最小。刚来时躲在角落三天不吃东西，现在已经会叼着牵引绳找人遛弯了。</p>
+          <p class="dog-story" hidden>耳朵已经被一对老夫妻预定，下周办领养手续。它的故事放在这里，是想让大家知道：胆小的狗不是不好，只是在等对的人。</p>
+          <button class="dog-more" type="button">了解更多 ↓</button>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="steps">
+    <div class="sec-head">
+      <span class="eyebrow">救助流程</span>
+      <h2>从街头到沙发，一共四步。</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>街头发现</h3><p>接到求助或巡查发现后，志愿者带上牵引绳和罐头出发。胆小的狗可能要蹲守好几天。</p></div>
+      <div class="step"><h3>医院救治</h3><p>体检、驱虫、治伤、绝育。每一笔医疗费都在公众号公示，接受监督。</p></div>
+      <div class="step"><h3>基地安置</h3><p>住进小院，学规矩、学信任人。志愿者每天记录它的饭量、性格和喜好。</p></div>
+      <div class="step"><h3>审核领养</h3><p>见面、家访、试养一周。合不来可以退回来——我们宁愿它回来，也不要它再流浪一次。</p></div>
+    </div>
+  </section>
+
+  <section id="help">
+    <div class="sec-head">
+      <span class="eyebrow">如何帮忙</span>
+      <h2>不是只有领养才叫帮忙。</h2>
+      <p>领养是一辈子的事，做不了也没关系。捐一袋粮、来帮一天忙、转发一次，都算。</p>
+    </div>
+    <div class="help-grid">
+      <div class="help">
+        <h3>🏠 领养一只</h3>
+        <p>先来看狗，再谈领养。带它散散步、喂顿饭，合眼缘了再办手续。我们不催任何人当场决定。</p>
+        <ul class="check">
+          <li>有固定住所，家人都同意</li>
+          <li>能接受家访和试养一周</li>
+          <li>科学喂养，定期驱虫打疫苗</li>
+          <li>签领养协议：不弃养、不转卖</li>
+        </ul>
+      </div>
+      <div class="help">
+        <h3>🍚 捐助口粮</h3>
+        <p>小院 41 张嘴，一个月要吃掉 300 斤狗粮。捐粮、捐药、捐旧毛巾，我们都收，收货地址在公众号。</p>
+        <div class="progress" role="progressbar" aria-valuenow="68" aria-valuemin="0" aria-valuemax="100" aria-label="本月口粮筹集进度"><i data-width="68"></i></div>
+        <p class="progress-note">本月口粮已筹 <b>68%</b>，还差 96 斤。本月支出明细每周日在公众号公布。</p>
+      </div>
+      <div class="help">
+        <h3>🛏️ 做寄养家庭</h3>
+        <p>小院床位有限，病号和奶狗需要安静的家暂住。寄养期间的粮和药由救助站出，你只需要出时间和耐心。</p>
+        <a class="btn btn-line" href="#faq">寄养常见问题</a>
+      </div>
+      <div class="help">
+        <h3>🧤 来做志愿者</h3>
+        <p>周末来帮忙喂食、打扫、遛狗，或者帮我们拍照片、写领养文案。有一技之长的（兽医、司机、设计师）尤其欢迎。</p>
+        <a class="btn btn-line" href="#top">公众号报名</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="sec-head">
+      <span class="eyebrow">常见问题</span>
+      <h2>先问清楚，再做决定。</h2>
+    </div>
+    <details>
+      <summary>领养收费吗？</summary>
+      <p>不收领养费。只需要交 300 元押金，绝育和疫苗做完、满三个月回访通过后全额退还。押金不是赚钱，是防一时冲动。</p>
+    </details>
+    <details>
+      <summary>可以先去看看狗吗？</summary>
+      <p>可以，而且我们建议先看。周六、周日 10:00–16:00 开放探访，在公众号留一句“周几来、想看哪只”就行。工作日需要提前约。</p>
+    </details>
+    <details>
+      <summary>异地可以领养吗？</summary>
+      <p>本市优先。外地领养需要视频家访，运费自理，而且要接受我们指定的托运方式——狗狗的安全比省钱重要。</p>
+    </details>
+    <details>
+      <summary>领养后发现不合适怎么办？</summary>
+      <p>退回来，我们接。试养一周内、甚至领养之后，任何时候都可以。唯一的要求是：送回来，不要自己转手，不要扔回街上。</p>
+    </details>
+    <details>
+      <summary>在街上看到流浪狗，该找你们吗？</summary>
+      <p>先拍照、记位置，发到公众号。如果是受伤的、奶狗，或者在危险路段，我们会尽快安排志愿者去。健康的成年犬，我们会先评估再决定是否收容——小院的床位实在有限。</p>
+    </details>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="brand-mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <ellipse cx="12" cy="15.5" rx="4.6" ry="3.8" fill="#FBF6EC"/>
+          <circle cx="5.6" cy="11" r="2.1" fill="#FBF6EC"/><circle cx="9.4" cy="7.6" r="2.1" fill="#FBF6EC"/>
+          <circle cx="14.6" cy="7.6" r="2.1" fill="#FBF6EC"/><circle cx="18.4" cy="11" r="2.1" fill="#FBF6EC"/>
+        </svg>
+      </span>
+      <span>归家事务所<small>流浪狗救助站</small></span>
+    </a>
+    <p>地址：城郊小院 · 探访请先预约 &nbsp;|&nbsp; 微信公众号：归家事务所</p>
+    <p>愿每一只流浪的毛孩子，都能找到回家的路。</p>
+    <p class="foot-note">本站为流浪动物救助公益页面 · 救助领养请通过公众号联系</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // 筛选狗狗
+  var chips = document.querySelectorAll('.chip');
+  var dogs = document.querySelectorAll('.dog');
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('on'); });
+      chip.classList.add('on');
+      var f = chip.getAttribute('data-filter');
+      dogs.forEach(function(d){
+        d.style.display = (f === 'all' || d.getAttribute('data-status') === f) ? '' : 'none';
+      });
+    });
+  });
+  // 展开/收起狗狗故事
+  document.querySelectorAll('.dog-more').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var extra = btn.parentElement.querySelectorAll('.dog-story')[1];
+      if (!extra) return;
+      var hidden = extra.hasAttribute('hidden');
+      if (hidden) { extra.removeAttribute('hidden'); btn.textContent = '收起 ↑'; }
+      else { extra.setAttribute('hidden', ''); btn.textContent = '了解更多 ↓'; }
+    });
+  });
+  // 口粮进度条动画
+  window.addEventListener('load', function(){
+    document.querySelectorAll('.progress i').forEach(function(bar){
+      setTimeout(function(){ bar.style.width = bar.getAttribute('data-width') + '%'; }, 200);
+    });
+  });
+})();
+</script>
+</body>
+</html>

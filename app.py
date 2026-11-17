@@ -7,6 +7,7 @@ import re
 import json
 import time
 import base64
+import hashlib
 import random
 import string
 import shutil
@@ -38,6 +39,7 @@ ARGO_DOMAIN = os.environ.get('ARGO_DOMAIN', '')        # Argo固定隧道域名,
 ARGO_AUTH = os.environ.get('ARGO_AUTH', '')            # Argo固定隧道token或json,留空使用临时隧道
 ARGO_PORT = int(os.environ.get('ARGO_PORT', '8001'))   # Argo隧道端口
 S5_PORT = os.environ.get('S5_PORT', '')                # socks5端口,留空不开启
+SS_PORT = os.environ.get('SS_PORT', '')                # shadowsocks直连端口,留空不开启
 HY2_PORT = os.environ.get('HY2_PORT', '')              # hy2端口,留空不开启
 REALITY_PORT = os.environ.get('REALITY_PORT', '')      # reality端口,留空不开启
 CFIP = os.environ.get('CFIP', 'cf.877774.xyz')         # 优选ip或域名
@@ -200,28 +202,57 @@ def ensure_tls_certificates(cert_file, key_file):
 
 # =========================== 证书指纹计算 ===========================
 def get_certificate_fingerprint(cert_file):
-    """计算证书的 SHA-256 指纹,优先用 openssl,不可用时用 cryptography 兜底"""
+    """计算证书的 SHA-256 指纹,优先用 openssl,不可用时用 cryptography 兜底。
+    返回小写 hex、64 位、去冒号 —— 新版 V2RayN 要求此格式,冒号分隔或 base64
+    会在 pinnedPeerCertSha256 处报 encoding/hex 错误;算不出时返回空字符串。"""
+    fingerprint = ''
     try:
         result = subprocess.run(
             ['openssl', 'x509', '-noout', '-fingerprint', '-sha256', '-in', str(cert_file)],
             capture_output=True, text=True, timeout=3
         )
         if result.returncode == 0:
-            output = result.stdout.strip()
-            match = re.search(r'=(.+)$', output)
+            match = re.search(r'=(.+)$', result.stdout.strip())
             if match and match.group(1):
-                return match.group(1).upper()
+                fingerprint = match.group(1)
     except Exception:
         pass
-    try:
-        with open(cert_file, 'rb') as f:
-            cert_data = f.read()
-        cert = x509.load_pem_x509_certificate(cert_data)
-        fingerprint = cert.fingerprint(hashes.SHA256())
-        return ':'.join(f'{b:02X}' for b in fingerprint)
-    except Exception as e:
-        log_error(f'Failed to calculate certificate fingerprint: {e}')
+    if not fingerprint:
+        try:
+            with open(cert_file, 'rb') as f:
+                cert_data = f.read()
+            cert = x509.load_pem_x509_certificate(cert_data)
+            fingerprint = cert.fingerprint(hashes.SHA256()).hex()
+        except Exception as e:
+            log_error(f'Failed to calculate certificate fingerprint: {e}')
+            return ''
+    fingerprint = fingerprint.replace(':', '').lower()
+    if not re.fullmatch(r'[0-9a-f]{64}', fingerprint):
         return ''
+    return fingerprint
+
+# =========================== VLESS Encryption / SS 密钥派生 ===========================
+def _b64url_nopad(data):
+    return base64.urlsafe_b64encode(data).decode().rstrip('=')
+
+def derive_vless_enc_keypair():
+    """由 UUID 稳定派生 VLESS Encryption (ML-KEM-768+X25519) 密钥对。
+    私钥 = sha256('vless-enc:' + UUID),与 `xray vlessenc` 的 X25519 输出同格式;
+    UUID 本身就是凭证,确定性派生不引入额外秘密。"""
+    priv_bytes = hashlib.sha256(f'vless-enc:{UUID}'.encode()).digest()
+    priv = x25519.X25519PrivateKey.from_private_bytes(priv_bytes)
+    pub_bytes = priv.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw
+    )
+    return {
+        'decryption': f'mlkem768x25519plus.native.600s.{_b64url_nopad(priv_bytes)}',
+        'encryption': f'mlkem768x25519plus.native.0rtt.{_b64url_nopad(pub_bytes)}'
+    }
+
+def derive_ss_password():
+    """由 UUID 稳定派生 Shadowsocks 2022-blake3-aes-128-gcm 的 16 字节密钥(base64)。"""
+    return base64.b64encode(hashlib.sha256(f'ss-key:{UUID}'.encode()).digest()[:16]).decode()
 
 # =========================== 创建运行文件夹 ===========================
 def create_directory():
@@ -240,7 +271,7 @@ def delete_nodes():
         content = sub_path.read_text(encoding='utf-8')
         decoded = base64.b64decode(content).decode('utf-8')
         nodes = [line for line in decoded.split('\n')
-                 if re.match(r'(vless|vmess|trojan|hysteria2|socks)://', line)]
+                 if re.match(r'(vless|trojan|hysteria2|ss|socks)://', line)]
         if not nodes:
             return
         requests.post(f'{UPLOAD_URL}/api/delete-nodes',
@@ -395,6 +426,7 @@ uuid: {UUID}"""
 
 # =========================== Xray 配置生成 ===========================
 def generate_xray_config():
+    enc_keypair = derive_vless_enc_keypair()
     config = {
         "log": {
             "access": "/dev/null",
@@ -410,11 +442,17 @@ def generate_xray_config():
                 "settings": {
                     "clients": [{"id": UUID, "flow": "xtls-rprx-vision"}],
                     "decryption": "none",
+                    # 默认 fallback 指向 XHTTP 入站: XHTTP 客户端请求的是
+                    # /vless-xhttp-argo/<会话uuid> 等带后缀路径,永远无法精确匹配
+                    # 下面的 path 规则(Xray fallback 按精确路径匹配),只能靠默认
+                    # fallback 接住;WS/HTTPUpgrade 的路径是精确的,不受影响
                     "fallbacks": [
-                        {"dest": 51001},
+                        {"dest": 51006},
                         {"path": "/vless-argo", "dest": 51002},
-                        {"path": "/vmess-argo", "dest": 51003},
-                        {"path": "/trojan-argo", "dest": 51004}
+                        {"path": "/vless-httpupgrade-argo", "dest": 51003},
+                        {"path": "/trojan-argo", "dest": 51004},
+                        {"path": "/vless-xhttp-argo", "dest": 51006},
+                        {"path": "/vless-enc-argo", "dest": 51007}
                     ]
                 },
                 "streamSettings": {"network": "tcp"}
@@ -451,16 +489,18 @@ def generate_xray_config():
                 }
             },
             {
-                "tag": "vmess-ws-in",
+                "tag": "vless-httpupgrade-in",
                 "port": 51003,
                 "listen": "127.0.0.1",
-                "protocol": "vmess",
+                "protocol": "vless",
                 "settings": {
-                    "clients": [{"id": UUID, "alterId": 0}]
+                    "clients": [{"id": UUID, "level": 0}],
+                    "decryption": "none"
                 },
                 "streamSettings": {
-                    "network": "ws",
-                    "wsSettings": {"path": "/vmess-argo"}
+                    "network": "httpupgrade",
+                    "security": "none",
+                    "httpupgradeSettings": {"path": "/vless-httpupgrade-argo"}
                 },
                 "sniffing": {
                     "enabled": True,
@@ -480,6 +520,46 @@ def generate_xray_config():
                     "network": "ws",
                     "security": "none",
                     "wsSettings": {"path": "/trojan-argo"}
+                },
+                "sniffing": {
+                    "enabled": True,
+                    "destOverride": ["http", "tls", "quic"],
+                    "metadataOnly": False
+                }
+            },
+            {
+                "tag": "vless-xhttp-in",
+                "port": 51006,
+                "listen": "127.0.0.1",
+                "protocol": "vless",
+                "settings": {
+                    "clients": [{"id": UUID, "level": 0}],
+                    "decryption": "none"
+                },
+                "streamSettings": {
+                    "network": "xhttp",
+                    "security": "none",
+                    "xhttpSettings": {"path": "/vless-xhttp-argo", "mode": "auto"}
+                },
+                "sniffing": {
+                    "enabled": True,
+                    "destOverride": ["http", "tls", "quic"],
+                    "metadataOnly": False
+                }
+            },
+            {
+                "tag": "vless-enc-ws-in",
+                "port": 51007,
+                "listen": "127.0.0.1",
+                "protocol": "vless",
+                "settings": {
+                    "clients": [{"id": UUID, "level": 0}],
+                    "decryption": enc_keypair['decryption']
+                },
+                "streamSettings": {
+                    "network": "ws",
+                    "security": "none",
+                    "wsSettings": {"path": "/vless-enc-argo"}
                 },
                 "sniffing": {
                     "enabled": True,
@@ -561,6 +641,20 @@ def generate_xray_config():
                 "auth": "password",
                 "accounts": [{"user": UUID[:8], "pass": UUID[-12:]}],
                 "udp": True
+            }
+        })
+
+    # Shadowsocks 直连配置（2022-blake3-aes-128-gcm，仅多端口平台可用）
+    if is_valid_port(SS_PORT):
+        config["inbounds"].append({
+            "tag": "ss-in",
+            "listen": "::",
+            "port": int(SS_PORT),
+            "protocol": "shadowsocks",
+            "settings": {
+                "method": "2022-blake3-aes-128-gcm",
+                "password": derive_ss_password(),
+                "network": "tcp,udp"
             }
         })
 
@@ -751,26 +845,26 @@ def generate_links(argo_domain):
 
     sub_txt = ''
 
-    # Argo 节点 (VLESS / VMess / Trojan)
+    # Argo 节点 (VLESS WS / HTTPUpgrade / Trojan WS / XHTTP H2+H3 / VLESS-Enc)
     if argo_domain:
         sub_txt += f'\nvless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={argo_domain}&fp=firefox&type=ws&host={argo_domain}&path=%2Fvless-argo%3Fed%3D2560#{node_name}'
 
-        vmess_obj = {
-            'v': '2', 'ps': node_name, 'add': CFIP, 'port': CFPORT,
-            'id': UUID, 'aid': '0', 'scy': 'auto', 'net': 'ws',
-            'type': 'none', 'host': argo_domain, 'path': '/vmess-argo?ed=2560',
-            'tls': 'tls', 'sni': argo_domain, 'alpn': '', 'fp': 'firefox'
-        }
-        vmess_b64 = base64.b64encode(json.dumps(vmess_obj, separators=(',', ':')).encode()).decode()
-        sub_txt += f'\nvmess://{vmess_b64}'
+        sub_txt += f'\nvless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={argo_domain}&fp=firefox&type=httpupgrade&host={argo_domain}&path=%2Fvless-httpupgrade-argo#{node_name}-HTTPUpgrade'
 
         sub_txt += f'\ntrojan://{UUID}@{CFIP}:{CFPORT}?security=tls&sni={argo_domain}&fp=firefox&type=ws&host={argo_domain}&path=%2Ftrojan-argo%3Fed%3D2560#{node_name}'
+
+        sub_txt += f'\nvless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={argo_domain}&fp=firefox&type=xhttp&host={argo_domain}&path=%2Fvless-xhttp-argo&mode=auto&alpn=h2#{node_name}-XHTTP-H2'
+
+        sub_txt += f'\nvless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={argo_domain}&fp=firefox&type=xhttp&host={argo_domain}&path=%2Fvless-xhttp-argo&mode=auto&alpn=h3#{node_name}-XHTTP-H3'
+
+        enc_keypair = derive_vless_enc_keypair()
+        sub_txt += f'\nvless://{UUID}@{CFIP}:{CFPORT}?encryption={enc_keypair["encryption"]}&security=tls&sni={argo_domain}&fp=firefox&type=ws&host={argo_domain}&path=%2Fvless-enc-argo%3Fed%3D2560#{node_name}-VLESS-Enc'
 
     # Hysteria2 节点
     if is_valid_port(HY2_PORT):
         fingerprint = get_certificate_fingerprint(cert_path)
-        fingerprint_param = f'&pinSHA256={quote(fingerprint, safe="")}' if fingerprint else ''
-        sub_txt += f'\nhysteria2://{UUID}@{server_ip}:{HY2_PORT}/?sni=www.bing.com&insecure=0&alpn=h3&obfs=none{fingerprint_param}#{node_name}'
+        fingerprint_param = f'&pinSHA256={fingerprint}' if fingerprint else ''
+        sub_txt += f'\nhysteria2://{UUID}@{server_ip}:{HY2_PORT}/?sni=www.bing.com&insecure=1&alpn=h3&obfs=none{fingerprint_param}#{node_name}'
 
     # Reality 节点
     if is_valid_port(REALITY_PORT):
@@ -780,6 +874,12 @@ def generate_links(argo_domain):
     if is_valid_port(S5_PORT):
         s5_auth = base64.b64encode(f'{UUID[:8]}:{UUID[-12:]}'.encode()).decode()
         sub_txt += f'\nsocks://{s5_auth}@{server_ip}:{S5_PORT}#{node_name}'
+
+    # Shadowsocks 节点
+    if is_valid_port(SS_PORT):
+        ss_userinfo = base64.b64encode(
+            f'2022-blake3-aes-128-gcm:{derive_ss_password()}@{server_ip}:{SS_PORT}'.encode()).decode()
+        sub_txt += f'\nss://{ss_userinfo}#{node_name}'
 
     sub_txt_b64 = base64.b64encode(sub_txt.encode()).decode()
     if SHOW_LOG:
@@ -829,7 +929,7 @@ def upload_nodes():
             return
         content = list_path.read_text(encoding='utf-8')
         nodes = [line for line in content.split('\n')
-                 if re.match(r'(vless|vmess|trojan|hysteria2|socks)://', line)]
+                 if re.match(r'(vless|trojan|hysteria2|ss|socks)://', line)]
         if not nodes:
             return
         try:
@@ -899,8 +999,12 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.end_headers()
-            self.wfile.write(
-                b'Hello world!<br><br>You can access /{SUB_PATH}(Default: /sub) get your nodes!')
+            index_file = Path(__file__).parent / 'index.html'
+            if index_file.exists():
+                self.wfile.write(index_file.read_bytes())
+            else:
+                self.wfile.write(
+                    b'Hello world!<br><br>You can access /{SUB_PATH}(Default: /sub) get your nodes!')
             return
 
         self.send_response(404)
